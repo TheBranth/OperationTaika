@@ -229,7 +229,7 @@ const BOSS_LEVEL_ID = 10;
 
 function generatePlaylist(): number[] {
   if ((window as any).isPuppeteerTest) {
-    return [1, 2, 11, 12, 13, 14, 15, 10]; // Deterministic test sequence
+    return [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15, 10]; // Deterministic test sequence
   }
   const shuffled = [...ALL_STANDARD_LEVELS];
   for (let i = shuffled.length - 1; i > 0; i--) {

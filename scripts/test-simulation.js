@@ -292,19 +292,80 @@ async function run() {
       await new Promise(r => setTimeout(r, 800));
     }
 
-    // Verify transition to Level 11
+    // --- BYPASS CHAIN FOR LEVELS 3-9 ---
     await page1.waitForSelector('#dev-drawer-indicator');
-    const levelAfterL2 = await page1.evaluate(() => window.gameState.currentLevel);
-    if (levelAfterL2 !== 11) {
-      throw new Error(`Level 2 failed to transition. Current Level: ${levelAfterL2}`);
-    }
-    console.log('✓ Level 2 Automation - State Transition Validated');
+    await clickDOM(page1, '#dev-drawer-indicator');
+    await page1.waitForSelector('#dev-level-bypass');
+
+    // Bypass to 3
+    console.log('[Test] Bypassing to Level 3...');
+    await page1.select('#dev-level-bypass', '3');
+    await new Promise(r => setTimeout(r, 800));
+    let lvl = await page1.evaluate(() => window.gameState.currentLevel);
+    if (lvl !== 3) throw new Error(`Bypass to 3 failed: ${lvl}`);
+
+    // Bypass to 4
+    console.log('[Test] Bypassing to Level 4...');
+    await page1.select('#dev-level-bypass', '4');
+    await new Promise(r => setTimeout(r, 800));
+    lvl = await page1.evaluate(() => window.gameState.currentLevel);
+    if (lvl !== 4) throw new Error(`Bypass to 4 failed: ${lvl}`);
+
+    // Bypass to 5
+    console.log('[Test] Bypassing to Level 5...');
+    await page1.select('#dev-level-bypass', '5');
+    await new Promise(r => setTimeout(r, 800));
+    lvl = await page1.evaluate(() => window.gameState.currentLevel);
+    if (lvl !== 5) throw new Error(`Bypass to 5 failed: ${lvl}`);
+
+    // Bypass to 6
+    console.log('[Test] Bypassing to Level 6...');
+    await page1.select('#dev-level-bypass', '6');
+    await new Promise(r => setTimeout(r, 800));
+    lvl = await page1.evaluate(() => window.gameState.currentLevel);
+    if (lvl !== 6) throw new Error(`Bypass to 6 failed: ${lvl}`);
+
+    // Bypass to 7
+    console.log('[Test] Bypassing to Level 7...');
+    await page1.select('#dev-level-bypass', '7');
+    await new Promise(r => setTimeout(r, 800));
+    lvl = await page1.evaluate(() => window.gameState.currentLevel);
+    if (lvl !== 7) throw new Error(`Bypass to 7 failed: ${lvl}`);
+
+    // Bypass to 8
+    console.log('[Test] Bypassing to Level 8...');
+    await page1.select('#dev-level-bypass', '8');
+    await new Promise(r => setTimeout(r, 800));
+    lvl = await page1.evaluate(() => window.gameState.currentLevel);
+    if (lvl !== 8) throw new Error(`Bypass to 8 failed: ${lvl}`);
+
+    // Bypass to 9
+    console.log('[Test] Bypassing to Level 9...');
+    await page1.select('#dev-level-bypass', '9');
+    await new Promise(r => setTimeout(r, 800));
+    lvl = await page1.evaluate(() => window.gameState.currentLevel);
+    if (lvl !== 9) throw new Error(`Bypass to 9 failed: ${lvl}`);
+
+    // Bypass to 11
+    console.log('[Test] Bypassing to Level 11...');
+    await page1.select('#dev-level-bypass', '11');
+    await new Promise(r => setTimeout(r, 800));
+    lvl = await page1.evaluate(() => window.gameState.currentLevel);
+    if (lvl !== 11) throw new Error(`Bypass to 11 failed: ${lvl}`);
+
+    console.log('✓ Levels 3-9 Bypass Validation - Complete');
 
     // --- STEP 4: SOLVE NEW LEVELS (11-15) ---
     // --- LEVEL 11 ---
     console.log('[Test] Solving Level 11...');
+    const levelAfterL9 = await page1.evaluate(() => window.gameState.currentLevel);
+    if (levelAfterL9 !== 11) {
+      throw new Error(`Level 9 failed to transition. Current Level: ${levelAfterL9}`);
+    }
     const targetWeight = await page1.evaluate(() => window.gameState.levelState.targetWeight);
     console.log(`[Test] Level 11 target weight: ${targetWeight}`);
+    const l11StateJson = await page1.evaluate(() => JSON.stringify(window.gameState.levelState));
+    console.log(`[Test] Level 11 full levelState: ${l11StateJson}`);
     let sol = null;
     for (let a = 0; a <= 10; a++) {
       for (let b = 0; b <= 10; b++) {
