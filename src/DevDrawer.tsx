@@ -91,6 +91,7 @@ export const DevDrawer: React.FC<DevDrawerProps> = ({
         className="dev-drawer-indicator"
         onClick={() => setIsVisible(true)}
         style={{
+          display: 'none',
           position: 'fixed',
           bottom: '10px',
           right: '10px',
