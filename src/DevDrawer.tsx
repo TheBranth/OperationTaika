@@ -163,9 +163,9 @@ export const DevDrawer: React.FC<DevDrawerProps> = ({
               cursor: 'pointer',
             }}
           >
-            {Array.from({ length: 10 }).map((_, idx) => (
-              <option key={idx + 1} value={idx + 1}>
-                Level {idx + 1}
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map((lvl) => (
+              <option key={lvl} value={lvl}>
+                Level {lvl}
               </option>
             ))}
           </select>

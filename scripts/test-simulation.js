@@ -19,6 +19,7 @@ const L1_TRANSLATIONS = {
 
 async function injectMockPeer(page) {
   await page.evaluateOnNewDocument(() => {
+    window.isPuppeteerTest = true;
     const signalingChannel = new BroadcastChannel('mock-peer-signaling');
     const dataChannel = new BroadcastChannel('mock-peer-data');
 
@@ -291,25 +292,128 @@ async function run() {
       await new Promise(r => setTimeout(r, 800));
     }
 
-    // Verify transition to Level 3
+    // Verify transition to Level 11
     await page1.waitForSelector('#dev-drawer-indicator');
     const levelAfterL2 = await page1.evaluate(() => window.gameState.currentLevel);
-    if (levelAfterL2 !== 3) {
+    if (levelAfterL2 !== 11) {
       throw new Error(`Level 2 failed to transition. Current Level: ${levelAfterL2}`);
     }
     console.log('✓ Level 2 Automation - State Transition Validated');
 
-    // --- STEP 4: BYPASS TO LEVEL 10 ---
-    console.log('[Test] Bypassing levels 3-9 to test boss fight...');
-    await clickDOM(page1, '#dev-drawer-indicator');
-    await page1.waitForSelector('#dev-level-bypass');
-    await page1.select('#dev-level-bypass', '10');
+    // --- STEP 4: SOLVE NEW LEVELS (11-15) ---
+    // --- LEVEL 11 ---
+    console.log('[Test] Solving Level 11...');
+    const targetWeight = await page1.evaluate(() => window.gameState.levelState.targetWeight);
+    console.log(`[Test] Level 11 target weight: ${targetWeight}`);
+    let sol = null;
+    for (let a = 0; a <= 10; a++) {
+      for (let b = 0; b <= 10; b++) {
+        for (let c = 0; c <= 10; c++) {
+          if (a * 12 + b * 19 + c * 7 === targetWeight) {
+            sol = { a, b, c };
+            break;
+          }
+        }
+        if (sol) break;
+      }
+      if (sol) break;
+    }
+    if (!sol) throw new Error('Level 11 weight target has no valid solution combination!');
+    console.log(`[Test] Level 11 solution: Tartufo=${sol.a}, Radice=${sol.b}, Erba=${sol.c}`);
 
-    // Wait for connection synchronization
-    await new Promise(r => setTimeout(r, 1500));
-    const isLevel10 = await page1.evaluate(() => window.gameState.currentLevel === 10);
-    if (!isLevel10) {
-      throw new Error('Level bypass failed to load Level 10');
+    for (let i = 0; i < sol.a; i++) {
+      await clickDOM(page2, '#l11-inc-tartufo');
+    }
+    for (let i = 0; i < sol.b; i++) {
+      await clickDOM(page2, '#l11-inc-radice');
+    }
+    for (let i = 0; i < sol.c; i++) {
+      await clickDOM(page2, '#l11-inc-erba');
+    }
+    await clickDOM(page2, '#l11-submit');
+    await new Promise(r => setTimeout(r, 800));
+    console.log('✓ Level 11 Automation - Verified');
+
+    // --- LEVEL 12 ---
+    console.log('[Test] Solving Level 12...');
+    const levelAfterL11 = await page1.evaluate(() => window.gameState.currentLevel);
+    if (levelAfterL11 !== 12) {
+      throw new Error(`Level 11 failed to transition. Current Level: ${levelAfterL11}`);
+    }
+    const targetAngle = await page1.evaluate(() => window.gameState.levelState.targetAngle);
+    console.log(`[Test] Level 12 target angle: ${targetAngle}`);
+    await page2.evaluate((angle) => {
+      window.gameState.levelState.currentAngle = angle;
+      window.connectionManager.sendAction({
+        type: 'LEVEL_ACTION',
+        level: 12,
+        actionType: 'ROTATE',
+        payload: { angle }
+      });
+    }, targetAngle);
+    await new Promise(r => setTimeout(r, 3500));
+    console.log('✓ Level 12 Automation - Verified');
+
+    // --- LEVEL 13 ---
+    console.log('[Test] Solving Level 13...');
+    const levelAfterL12 = await page1.evaluate(() => window.gameState.currentLevel);
+    if (levelAfterL12 !== 13) {
+      throw new Error(`Level 12 failed to transition. Current Level: ${levelAfterL12}`);
+    }
+    const tFreq = await page1.evaluate(() => window.gameState.levelState.targetFreq);
+    const tAmp = await page1.evaluate(() => window.gameState.levelState.targetAmp);
+    console.log(`[Test] Level 13 target: Freq=${tFreq}, Amp=${tAmp}`);
+    await page2.evaluate((freq, amp) => {
+      window.connectionManager.sendAction({
+        type: 'LEVEL_ACTION',
+        level: 13,
+        actionType: 'TUNE',
+        payload: { freq, amp }
+      });
+    }, tFreq, tAmp);
+    await new Promise(r => setTimeout(r, 500));
+    await clickDOM(page2, '#l13-submit');
+    await new Promise(r => setTimeout(r, 800));
+    console.log('✓ Level 13 Automation - Verified');
+
+    // --- LEVEL 14 ---
+    console.log('[Test] Solving Level 14...');
+    const levelAfterL13 = await page1.evaluate(() => window.gameState.currentLevel);
+    if (levelAfterL13 !== 14) {
+      throw new Error(`Level 13 failed to transition. Current Level: ${levelAfterL13}`);
+    }
+    const tSeq = await page1.evaluate(() => window.gameState.levelState.targetSequence);
+    console.log(`[Test] Level 14 target sequence: ${tSeq.join(', ')}`);
+    for (const starIdx of tSeq) {
+      await clickDOM(page2, `#l14-star-${starIdx}`);
+    }
+    await clickDOM(page2, '#l14-submit');
+    await new Promise(r => setTimeout(r, 800));
+    console.log('✓ Level 14 Automation - Verified');
+
+    // --- LEVEL 15 ---
+    console.log('[Test] Solving Level 15...');
+    const levelAfterL14 = await page1.evaluate(() => window.gameState.currentLevel);
+    if (levelAfterL14 !== 15) {
+      throw new Error(`Level 14 failed to transition. Current Level: ${levelAfterL14}`);
+    }
+    await page1.evaluate(() => {
+      window.gameState.levelState.tubeAlpha = 10;
+      window.gameState.levelState.tubeBeta = 10;
+      window.gameState.levelState.tubeGamma = 10;
+      window.gameState.levelState.integrity = 100;
+      window.connectionManager.broadcastState(window.gameState);
+    });
+    await new Promise(r => setTimeout(r, 500));
+    await clickDOM(page2, '#l15-purge');
+    await new Promise(r => setTimeout(r, 800));
+    console.log('✓ Level 15 Automation - Verified');
+
+    // --- STEP 5: BOSS LEVEL (10) ---
+    console.log('[Test] Transitioning to Boss Level 10...');
+    const levelAfterL15 = await page1.evaluate(() => window.gameState.currentLevel);
+    if (levelAfterL15 !== 10) {
+      throw new Error(`Level 15 failed to transition. Current Level: ${levelAfterL15}`);
     }
 
     // --- STEP 5: LEVEL 10 - PHASE 1 (HACK) ---

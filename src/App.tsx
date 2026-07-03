@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { connectionManager } from './connection';
-import type { GameState, GameAction, PlayerRole, Level1State, Level2State, Level3State, Level4State, Level5State, Level6State, Level7State, Level8State, Level9State, Level10State } from './types';
+import type { GameState, GameAction, PlayerRole, Level1State, Level2State, Level3State, Level4State, Level5State, Level6State, Level7State, Level8State, Level9State, Level10State, Level11State, Level12State, Level13State, Level14State, Level15State } from './types';
 import { DevDrawer } from './DevDrawer';
 import { DisruptionOverlay } from './DisruptionOverlay';
 import { playClick, playSuccess, playFail } from './audio';
@@ -16,6 +16,11 @@ import { Level7 } from './levels/Level7';
 import { Level8 } from './levels/Level8';
 import { Level9 } from './levels/Level9';
 import { Level10 } from './levels/Level10';
+import { Level11 } from './levels/Level11';
+import { Level12 } from './levels/Level12';
+import { Level13 } from './levels/Level13';
+import { Level14 } from './levels/Level14';
+import { Level15 } from './levels/Level15';
 
 import './App.css';
 
@@ -133,14 +138,125 @@ const getInitialLevelState = (level: number): any => {
         p2StrikeTime: null,
       } as Level10State;
 
+    case 11:
+      const a = Math.floor(Math.random() * 4) + 1;
+      const b = Math.floor(Math.random() * 4) + 1;
+      const c = Math.floor(Math.random() * 4) + 1;
+      return {
+        targetWeight: a * 12 + b * 19 + c * 7,
+        p2Tartufo: 0,
+        p2Radice: 0,
+        p2Erba: 0,
+      } as Level11State;
+
+    case 12:
+      const angles = [45, 90, 120, 180, 225, 270, 315];
+      return {
+        targetAngle: angles[Math.floor(Math.random() * angles.length)],
+        currentAngle: 0,
+        holdSeconds: 0,
+        lastHoldTick: Date.now(),
+      } as Level12State;
+
+    case 13:
+      const freqs = [20, 35, 50, 65, 80, 95];
+      const amps = [1.5, 2.5, 3.5, 4.5];
+      return {
+        targetFreq: freqs[Math.floor(Math.random() * freqs.length)],
+        targetAmp: amps[Math.floor(Math.random() * amps.length)],
+        currentFreq: 10,
+        currentAmp: 1.0,
+      } as Level13State;
+
+    case 14:
+      const starPool = [
+        { x: 20, y: 30 },
+        { x: 50, y: 15 },
+        { x: 80, y: 30 },
+        { x: 80, y: 70 },
+        { x: 50, y: 85 },
+        { x: 20, y: 70 },
+      ];
+      const targetSeq: number[] = [];
+      while (targetSeq.length < 4) {
+        const rIdx = Math.floor(Math.random() * starPool.length);
+        if (!targetSeq.includes(rIdx)) {
+          targetSeq.push(rIdx);
+        }
+      }
+      return {
+        stars: starPool,
+        targetSequence: targetSeq,
+        p2SelectedSequence: [],
+      } as Level14State;
+
+    case 15:
+      return {
+        tubeAlpha: 50,
+        tubeBeta: 50,
+        tubeGamma: 50,
+        integrity: 100,
+      } as Level15State;
+
     default:
       return {};
+  }
+};
+
+interface LevelMetadata {
+  id: number;
+  componentName: string;
+}
+
+const ALL_STANDARD_LEVELS: LevelMetadata[] = [
+  { id: 1, componentName: 'Level1' },
+  { id: 2, componentName: 'Level2' },
+  { id: 3, componentName: 'Level3' },
+  { id: 4, componentName: 'Level4' },
+  { id: 5, componentName: 'Level5' },
+  { id: 6, componentName: 'Level6' },
+  { id: 7, componentName: 'Level7' },
+  { id: 8, componentName: 'Level8' },
+  { id: 9, componentName: 'Level9' },
+  { id: 11, componentName: 'Level11' },
+  { id: 12, componentName: 'Level12' },
+  { id: 13, componentName: 'Level13' },
+  { id: 14, componentName: 'Level14' },
+  { id: 15, componentName: 'Level15' }
+];
+
+const BOSS_LEVEL_ID = 10;
+
+function generatePlaylist(): number[] {
+  if ((window as any).isPuppeteerTest) {
+    return [1, 2, 11, 12, 13, 14, 15, 10]; // Deterministic test sequence
+  }
+  const shuffled = [...ALL_STANDARD_LEVELS];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  const selectedIds = shuffled.slice(0, 8).map(lvl => lvl.id);
+  selectedIds.push(BOSS_LEVEL_ID);
+  return selectedIds;
+}
+
+const advancePlaylist = (state: GameState) => {
+  if (state.playlist && state.playlist.length > 0 && state.playlistIndex < state.playlist.length - 1) {
+    state.playlistIndex += 1;
+    const nextLvl = state.playlist[state.playlistIndex];
+    state.currentLevel = nextLvl;
+    state.levelState = getInitialLevelState(nextLvl);
+  } else {
+    state.status = 'victory';
   }
 };
 
 const defaultState: GameState = {
   status: 'lobby',
   currentLevel: 1,
+  playlist: [],
+  playlistIndex: 0,
   playMode: null,
   hostPeerId: null,
   roles: {
@@ -208,9 +324,10 @@ export const App: React.FC = () => {
     setTimeout(() => setIsShaking(false), 400);
   };
 
-  // Expose gameState on window for headless automated testing
+  // Expose gameState and connectionManager on window for headless automated testing
   useEffect(() => {
     (window as any).gameState = gameState;
+    (window as any).connectionManager = connectionManager;
   }, [gameState]);
 
   // Sync callbacks inside connection manager
@@ -369,8 +486,7 @@ export const App: React.FC = () => {
           // Advance level if held stable for 20s
           if (nextGreen >= 20.0) {
             playSuccess();
-            state.currentLevel = 8;
-            state.levelState = getInitialLevelState(8);
+            advancePlaylist(state);
           } else if (nextVal === -100 || nextVal === 100) {
             // Crash! Reset
             playFail();
@@ -522,6 +638,57 @@ export const App: React.FC = () => {
           }
         }
 
+        if (state.currentLevel === 12) {
+          const lvlState = state.levelState as Level12State;
+          const diff = Math.min(Math.abs(lvlState.currentAngle - lvlState.targetAngle), 360 - Math.abs(lvlState.currentAngle - lvlState.targetAngle));
+          const isAligned = diff <= 2;
+          let nextHold = lvlState.holdSeconds;
+          
+          if (isAligned) {
+            nextHold += 0.1;
+          } else {
+            nextHold = 0;
+          }
+
+          if (nextHold >= 3.0) {
+            playSuccess();
+            advancePlaylist(state);
+            changed = true;
+          } else if (nextHold !== lvlState.holdSeconds) {
+            state.levelState = { ...lvlState, holdSeconds: nextHold };
+            changed = true;
+          }
+        }
+
+        if (state.currentLevel === 15) {
+          const lvlState = state.levelState as Level15State;
+          let ta = Math.min(100, lvlState.tubeAlpha + 1.0);
+          let tb = Math.min(100, lvlState.tubeBeta + 1.0);
+          let tg = Math.min(100, lvlState.tubeGamma + 1.0);
+          
+          let nextIntegrity = lvlState.integrity;
+          if (ta >= 100 || tb >= 100 || tg >= 100) {
+            nextIntegrity = Math.max(0, nextIntegrity - 2.0);
+          }
+
+          if (nextIntegrity <= 0) {
+            playFail();
+            triggerScreenShake();
+            state.failures += 1;
+            state.levelState = getInitialLevelState(15);
+            changed = true;
+          } else {
+            state.levelState = {
+              ...lvlState,
+              tubeAlpha: ta,
+              tubeBeta: tb,
+              tubeGamma: tg,
+              integrity: nextIntegrity,
+            };
+            changed = true;
+          }
+        }
+
         if (changed) {
           state.lastUpdate = Date.now();
           setGameState(state);
@@ -548,19 +715,32 @@ export const App: React.FC = () => {
         }
         break;
 
-      case 'START_GAME':
+      case 'START_GAME': {
+        const pl = generatePlaylist();
         state.status = 'playing';
-        state.currentLevel = 1;
-        state.levelState = getInitialLevelState(1);
+        state.playlist = pl;
+        state.playlistIndex = 0;
+        state.currentLevel = pl[0];
+        state.levelState = getInitialLevelState(pl[0]);
         changed = true;
         break;
+      }
 
-      case 'BYPASS_LEVEL':
+      case 'BYPASS_LEVEL': {
         state.status = 'playing';
         state.currentLevel = action.level;
         state.levelState = getInitialLevelState(action.level);
+        const idx = state.playlist.indexOf(action.level);
+        if (idx !== -1) {
+          state.playlistIndex = idx;
+        } else {
+          state.playlist = [...state.playlist];
+          state.playlist.push(action.level);
+          state.playlistIndex = state.playlist.length - 1;
+        }
         changed = true;
         break;
+      }
 
       case 'FORCE_STATE':
         state.status = action.status;
@@ -623,8 +803,7 @@ export const App: React.FC = () => {
             const isCorrect = lState.p1Inputs.every((val, idx) => val === targetWords[idx]);
             if (isCorrect) {
               playSuccess();
-              state.currentLevel = 2;
-              state.levelState = getInitialLevelState(2);
+              advancePlaylist(state);
             } else {
               playFail();
               triggerScreenShake();
@@ -660,8 +839,7 @@ export const App: React.FC = () => {
 
               if (val === nextLState.targetValue) {
                 playSuccess();
-                state.currentLevel = 3;
-                state.levelState = getInitialLevelState(3);
+                advancePlaylist(state);
               } else if (nextSteps <= 0) {
                 playFail();
                 triggerScreenShake();
@@ -694,8 +872,7 @@ export const App: React.FC = () => {
               playSuccess();
               const nextHits = lState.hits + 1;
               if (nextHits >= 3) {
-                state.currentLevel = 4;
-                state.levelState = getInitialLevelState(4);
+                advancePlaylist(state);
               } else {
                 const coords = ['A1', 'A3', 'B2', 'B5', 'C3', 'C4', 'D1', 'D5', 'E2', 'E4'];
                 state.levelState = {
@@ -732,8 +909,7 @@ export const App: React.FC = () => {
               playSuccess();
               const nextScore = lState.score + 1;
               if (nextScore >= 4) {
-                state.currentLevel = 5;
-                state.levelState = getInitialLevelState(5);
+                advancePlaylist(state);
               } else {
                 const elements: ('FUOCO' | 'TERRA' | 'OMBRA')[] = ['FUOCO', 'TERRA', 'OMBRA'];
                 state.levelState = {
@@ -770,8 +946,7 @@ export const App: React.FC = () => {
           } else if (action.actionType === 'SUBMIT_WORD') {
             if (action.payload.word === lState.secretWord) {
               playSuccess();
-              state.currentLevel = 6;
-              state.levelState = getInitialLevelState(6);
+              advancePlaylist(state);
             } else {
               playFail();
               triggerScreenShake();
@@ -812,8 +987,7 @@ export const App: React.FC = () => {
             const checkState = state.levelState as Level6State;
             if (checkState.avatarPos.x === 9 && checkState.avatarPos.y === 9) {
               playSuccess();
-              state.currentLevel = 7;
-              state.levelState = getInitialLevelState(7);
+              advancePlaylist(state);
             }
           }
         }
@@ -841,8 +1015,7 @@ export const App: React.FC = () => {
                 playSuccess();
                 const nextRound = lState.round + 1;
                 if (nextRound > 3) {
-                  state.currentLevel = 9;
-                  state.levelState = getInitialLevelState(9);
+                  advancePlaylist(state);
                 } else {
                   const colPool = ['Rosso', 'Blu', 'Verde', 'Giallo'];
                   const nextSeqLen = 3 + nextRound;
@@ -902,8 +1075,7 @@ export const App: React.FC = () => {
 
             if (nextScore >= 20) {
               playSuccess();
-              state.currentLevel = 10;
-              state.levelState = getInitialLevelState(10);
+              advancePlaylist(state);
             } else if (nextMissed > 3) {
               // Level Failed
               playFail();
@@ -1017,6 +1189,121 @@ export const App: React.FC = () => {
             }
           }
         }
+
+        else if (state.currentLevel === 11) {
+          const lState = state.levelState as Level11State;
+          if (action.actionType === 'ADJUST_INGREDIENT') {
+            const { ingredient, amount } = action.payload;
+            if (ingredient === 'tartufo') {
+              state.levelState = { ...lState, p2Tartufo: Math.min(10, Math.max(0, lState.p2Tartufo + amount)) };
+            } else if (ingredient === 'radice') {
+              state.levelState = { ...lState, p2Radice: Math.min(10, Math.max(0, lState.p2Radice + amount)) };
+            } else if (ingredient === 'erba') {
+              state.levelState = { ...lState, p2Erba: Math.min(10, Math.max(0, lState.p2Erba + amount)) };
+            }
+            changed = true;
+          } else if (action.actionType === 'SUBMIT') {
+            const total = lState.p2Tartufo * 12 + lState.p2Radice * 19 + lState.p2Erba * 7;
+            if (total === lState.targetWeight) {
+              playSuccess();
+              advancePlaylist(state);
+            } else {
+              playFail();
+              triggerScreenShake();
+              state.failures += 1;
+              state.levelState = { ...lState, p2Tartufo: 0, p2Radice: 0, p2Erba: 0 };
+            }
+            changed = true;
+          }
+        }
+
+        else if (state.currentLevel === 12) {
+          const lState = state.levelState as Level12State;
+          if (action.actionType === 'ROTATE') {
+            state.levelState = { ...lState, currentAngle: action.payload.angle, holdSeconds: 0 };
+            changed = true;
+          }
+        }
+
+        else if (state.currentLevel === 13) {
+          const lState = state.levelState as Level13State;
+          if (action.actionType === 'TUNE') {
+            state.levelState = { ...lState, currentFreq: action.payload.freq, currentAmp: action.payload.amp };
+            changed = true;
+          } else if (action.actionType === 'SUBMIT') {
+            const isMatch = Math.abs(lState.currentFreq - lState.targetFreq) <= 3 && Math.abs(lState.currentAmp - lState.targetAmp) <= 0.2;
+            if (isMatch) {
+              playSuccess();
+              advancePlaylist(state);
+            } else {
+              playFail();
+              triggerScreenShake();
+              state.failures += 1;
+            }
+            changed = true;
+          }
+        }
+
+        else if (state.currentLevel === 14) {
+          const lState = state.levelState as Level14State;
+          if (action.actionType === 'CONNECT_STAR') {
+            const nextSeq = [...lState.p2SelectedSequence, action.payload.index];
+            state.levelState = { ...lState, p2SelectedSequence: nextSeq };
+            changed = true;
+          } else if (action.actionType === 'RESET_STARS') {
+            state.levelState = { ...lState, p2SelectedSequence: [] };
+            changed = true;
+          } else if (action.actionType === 'SUBMIT') {
+            const isCorrect = lState.targetSequence.length === lState.p2SelectedSequence.length &&
+              lState.targetSequence.every((val, idx) => val === lState.p2SelectedSequence[idx]);
+            if (isCorrect) {
+              playSuccess();
+              advancePlaylist(state);
+            } else {
+              playFail();
+              triggerScreenShake();
+              state.failures += 1;
+              state.levelState = { ...lState, p2SelectedSequence: [] };
+            }
+            changed = true;
+          }
+        }
+
+        else if (state.currentLevel === 15) {
+          const lState = state.levelState as Level15State;
+          if (action.actionType === 'BLEED_VALVE') {
+            const v = action.payload.valve;
+            let { tubeAlpha: ta, tubeBeta: tb, tubeGamma: tg } = lState;
+            if (v === 'alpha') {
+              ta = Math.max(0, ta - 30);
+              tb = Math.min(100, tb + 15);
+              tg = Math.min(100, tg + 15);
+            } else if (v === 'beta') {
+              ta = Math.min(100, ta + 15);
+              tb = Math.max(0, tb - 30);
+              tg = Math.min(100, tg + 15);
+            } else if (v === 'gamma') {
+              ta = Math.min(100, ta + 15);
+              tb = Math.min(100, tb + 15);
+              tg = Math.max(0, tg - 30);
+            }
+            state.levelState = { ...lState, tubeAlpha: ta, tubeBeta: tb, tubeGamma: tg };
+            changed = true;
+          } else if (action.actionType === 'PURGE') {
+            const canPurge = lState.tubeAlpha < 20 && lState.tubeBeta < 20 && lState.tubeGamma < 20;
+            if (canPurge) {
+              playSuccess();
+              advancePlaylist(state);
+            } else {
+              playFail();
+              triggerScreenShake();
+              state.failures += 1;
+              state.levelState = { ...lState, integrity: Math.max(0, lState.integrity - 25) };
+            }
+            changed = true;
+          }
+        }
+
         break;
     }
 
@@ -1125,6 +1412,11 @@ export const App: React.FC = () => {
       case 8: return <Level8 {...props} />;
       case 9: return <Level9 {...props} />;
       case 10: return <Level10 {...props} />;
+      case 11: return <Level11 {...props} />;
+      case 12: return <Level12 {...props} />;
+      case 13: return <Level13 {...props} />;
+      case 14: return <Level14 {...props} />;
+      case 15: return <Level15 {...props} />;
       default: return <div>Livello sconosciuto</div>;
     }
   };

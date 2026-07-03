@@ -94,9 +94,45 @@ export interface Level10State {
   p2StrikeTime: number | null;
 }
 
+export interface Level11State {
+  targetWeight: number;
+  p2Tartufo: number;
+  p2Radice: number;
+  p2Erba: number;
+}
+
+export interface Level12State {
+  targetAngle: number;
+  currentAngle: number;
+  holdSeconds: number;
+  lastHoldTick: number;
+}
+
+export interface Level13State {
+  targetFreq: number;
+  targetAmp: number;
+  currentFreq: number;
+  currentAmp: number;
+}
+
+export interface Level14State {
+  stars: { x: number; y: number }[];
+  targetSequence: number[];
+  p2SelectedSequence: number[];
+}
+
+export interface Level15State {
+  tubeAlpha: number;
+  tubeBeta: number;
+  tubeGamma: number;
+  integrity: number;
+}
+
 export interface GameState {
   status: 'lobby' | 'playing' | 'victory' | 'gameover';
   currentLevel: number;
+  playlist: number[];
+  playlistIndex: number;
   playMode: PlayMode | null;
   hostPeerId: string | null;
   roles: {
