@@ -1142,7 +1142,7 @@ export const App: React.FC = () => {
           <h1 className="lobby-title">🚀 OPERATION TAIKA</h1>
           
           <div style={{ display: 'flex', gap: '30px', width: '100%', flexWrap: 'wrap', justifyContent: 'center' }}>
-            <div style={{ flex: 1, minWidth: '280px', borderRight: '1px solid rgba(255,255,255,0.1)', paddingRight: '20px' }}>
+            <div style={{ display: 'none', flex: 1, minWidth: '280px', borderRight: '1px solid rgba(255,255,255,0.1)', paddingRight: '20px' }}>
               <h3 style={{ color: 'var(--neon-cyan)', marginTop: 0 }}>LOCAL TEST SETUP</h3>
               <p style={{ fontSize: '13px', color: '#aaa', lineHeight: '1.6' }}>
                 Simula i comandi di tutti i giocatori in una visuale split-screen locale. Ottimo per testare le meccaniche velocemente su un unico schermo.
