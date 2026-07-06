@@ -400,6 +400,12 @@ class ConnectionManager {
     conn.on('close', () => {
       console.log(`[Network] Peer connection closed: ${conn.peer}`);
       this.connections.delete(conn.peer);
+      
+      // Dispatch disconnect action to Host state loop
+      if (this.role === 'operator' && this.onActionReceivedCb) {
+        this.onActionReceivedCb({ type: 'DISCONNECT_PEER', peerId: conn.peer });
+      }
+
       if (this.role !== 'operator' && conn.peer === this.roomCode) {
         this.status = 'reconnecting';
         this.updateStatus();

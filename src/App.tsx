@@ -1526,11 +1526,12 @@ export const App: React.FC = () => {
                       </div>
                       <button
                         id="btn-start-game"
-                        className="btn-primary glow-magenta"
+                        className={gameState.roles.pilot ? "btn-primary glow-magenta" : "btn-secondary"}
                         onClick={handleStartGame}
-                        style={{ width: '100%' }}
+                        style={{ width: '100%', cursor: gameState.roles.pilot ? 'pointer' : 'not-allowed', opacity: gameState.roles.pilot ? 1 : 0.6 }}
+                        disabled={!gameState.roles.pilot}
                       >
-                        AVVIA PARTITA!
+                        {gameState.roles.pilot ? 'AVVIA PARTITA!' : 'ATTESA PILOTA...'}
                       </button>
                     </>
                   ) : (
@@ -1554,7 +1555,41 @@ export const App: React.FC = () => {
 
       {/* --- 2. ACTIVE GAME --- */}
       {isPlaying && (
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, position: 'relative' }}>
+          {/* Disconnection Overlay */}
+          {gameState.playMode === 'remote' && !gameState.roles.pilot && (
+            <div style={{
+              position: 'absolute',
+              top: 0, left: 0, right: 0, bottom: 0,
+              background: 'rgba(0,0,0,0.85)',
+              zIndex: 9999,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
+              color: '#ff3333',
+              fontFamily: 'monospace',
+              border: '2px solid #ff3333'
+            }}>
+              <style>{`
+                @keyframes spinner-anim {
+                  0% { transform: rotate(0deg); }
+                  100% { transform: rotate(360deg); }
+                }
+              `}</style>
+              <h2 style={{ textShadow: '0 0 10px #ff3333', margin: '0 0 10px 0' }}>⚠️ CONNESSIONE PERSA</h2>
+              <p style={{ color: '#fff', fontSize: '14px' }}>Riconnessione con il partner in corso...</p>
+              <div style={{
+                marginTop: '20px',
+                width: '30px',
+                height: '30px',
+                border: '3px solid rgba(255,51,51,0.3)',
+                borderTopColor: '#ff3333',
+                borderRadius: '50%',
+                animation: 'spinner-anim 1s infinite linear'
+              }} />
+            </div>
+          )}
           {/* Top general status bar */}
           <div style={{ background: 'rgba(0,0,0,0.8)', borderBottom: '1px solid rgba(255,255,255,0.1)', padding: '8px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', fontFamily: 'monospace' }}>
             <div style={{ color: '#00ffcc', fontWeight: 'bold' }}>LIVELLO CORRENTE: {gameState.currentLevel} / 10</div>
