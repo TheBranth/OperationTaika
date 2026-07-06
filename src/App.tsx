@@ -718,6 +718,7 @@ export const App: React.FC = () => {
       case 'START_GAME': {
         const pl = generatePlaylist();
         state.status = 'playing';
+        state.playMode = action.mode || 'remote';
         state.playlist = pl;
         state.playlistIndex = 0;
         state.currentLevel = pl[0];
@@ -1352,6 +1353,7 @@ export const App: React.FC = () => {
     playClick();
     setIsLobbyCreator(true);
     setLocalRole('operator');
+    setGameState(prev => ({ ...prev, playMode: 'remote' }));
     const code = await connectionManager.initializeHost();
     setRoomCode(code);
   };
