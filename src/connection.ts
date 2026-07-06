@@ -17,12 +17,59 @@ class ConnectionManager {
   private onActionReceivedCb: ((action: GameAction) => void) | null = null;
 
   private simulatedLag: number = 0; // ms
+  private _localResolve: (() => void) | null = null;
 
   constructor() {
     // Initialize a broadcast channel for local multi-tab sync
     this.broadcastChannel = new BroadcastChannel('operation-taika-local-channel');
     this.broadcastChannel.onmessage = (event) => {
-      this.handleIncomingData(event.data);
+      const payload = event.data;
+      if (!payload || !payload.roomCode || payload.roomCode !== this.roomCode) return;
+      if (payload.senderPeerId === this.myPeerId) return;
+
+      // Handle local loopback handshake
+      if (payload.type === 'LOCAL_CONNECT') {
+        if (this.role === 'operator') {
+          console.log('[Host] Local BroadcastChannel connect request received:', payload.senderPeerId);
+          this.connections.set(payload.senderPeerId, {
+            open: true,
+            isMock: true,
+            close: () => {},
+            send: () => {}
+          } as any);
+
+          // Reply with ACK
+          this.broadcastChannel?.postMessage({
+            type: 'LOCAL_CONNECT_ACK',
+            roomCode: this.roomCode,
+            senderPeerId: this.myPeerId,
+            role: this.role
+          });
+
+          // Trigger host SET_ROLE state update
+          if (this.onActionReceivedCb) {
+            this.onActionReceivedCb({ type: 'SET_ROLE', role: payload.role, peerId: payload.senderPeerId });
+          }
+        }
+      } else if (payload.type === 'LOCAL_CONNECT_ACK') {
+        if (this.role !== 'operator' && this.status !== 'connected') {
+          console.log('[Client] Local BroadcastChannel connect ACK received:', payload.senderPeerId);
+          this.status = 'connected';
+          this.updateStatus();
+          this.connections.set(this.roomCode || '', {
+            open: true,
+            isMock: true,
+            close: () => {},
+            send: () => {}
+          } as any);
+
+          if (this._localResolve) {
+            this._localResolve();
+          }
+        }
+      } else {
+        this.handleIncomingData(payload);
+      }
     };
   }
 
@@ -43,7 +90,6 @@ class ConnectionManager {
     return this.simulatedLag;
   }
 
-  // Delay helper
   private delay(fn: () => void) {
     if (this.simulatedLag > 0) {
       setTimeout(fn, this.simulatedLag);
@@ -59,46 +105,82 @@ class ConnectionManager {
     this.status = 'connecting';
     this.updateStatus();
 
-    return new Promise((resolve, reject) => {
-      const PeerConstructor = (window as any).Peer || Peer;
-      // Connect to the public PeerJS server
-      this.peer = new PeerConstructor({
-        host: '0.peerjs.com',
-        secure: true,
-        port: 443,
-        config: {
-          iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-          ]
+    return new Promise((resolve) => {
+      let resolved = false;
+      const localFallbackId = 'LOCAL-' + Math.floor(1000 + Math.random() * 9000);
+
+      const timeout = setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          this.myPeerId = localFallbackId;
+          this.roomCode = localFallbackId;
+          this.status = 'connected';
+          this.updateStatus();
+          console.log(`[Host] PeerJS signaling timed out. Resolving with local fallback code: ${localFallbackId}`);
+          resolve(localFallbackId);
         }
-      });
+      }, 2500);
 
-      this.peer!.on('open', (id) => {
-        this.myPeerId = id;
-        this.roomCode = id;
-        this.status = 'connected';
-        this.updateStatus();
-        console.log(`[Host] Started lobby. Room Code: ${id}`);
-        resolve(id);
-      });
+      const PeerConstructor = (window as any).Peer || Peer;
+      try {
+        this.peer = new PeerConstructor({
+          host: '0.peerjs.com',
+          secure: true,
+          port: 443,
+          config: {
+            iceServers: [
+              { urls: 'stun:stun.l.google.com:19302' },
+              { urls: 'stun:stun1.l.google.com:19302' },
+            ]
+          }
+        });
 
-      this.peer!.on('connection', (conn) => {
-        console.log(`[Host] Incoming client connection: ${conn.peer}`);
-        this.setupConnection(conn);
-      });
+        this.peer!.on('open', (id) => {
+          clearTimeout(timeout);
+          if (!resolved) {
+            resolved = true;
+            this.myPeerId = id;
+            this.roomCode = id;
+            this.status = 'connected';
+            this.updateStatus();
+            console.log(`[Host] Started lobby. Room Code: ${id}`);
+            resolve(id);
+          }
+        });
 
-      this.peer!.on('error', (err) => {
-        console.error('[Host] PeerJS Error:', err);
-        this.status = 'disconnected';
-        this.updateStatus();
-        reject(err);
-      });
+        this.peer!.on('connection', (conn) => {
+          console.log(`[Host] Incoming client connection: ${conn.peer}`);
+          this.setupConnection(conn);
+        });
 
-      this.peer!.on('disconnected', () => {
-        console.warn('[Host] Disconnected from signaling server. Attempting reconnect...');
-        this.peer?.reconnect();
-      });
+        this.peer!.on('error', (err) => {
+          console.error('[Host] PeerJS Error:', err);
+          if (!resolved) {
+            clearTimeout(timeout);
+            resolved = true;
+            this.myPeerId = localFallbackId;
+            this.roomCode = localFallbackId;
+            this.status = 'connected';
+            this.updateStatus();
+            resolve(localFallbackId);
+          }
+        });
+
+        this.peer!.on('disconnected', () => {
+          console.warn('[Host] Disconnected from signaling server.');
+        });
+      } catch (e) {
+        console.error('[Host] PeerJS instantiation failed:', e);
+        if (!resolved) {
+          clearTimeout(timeout);
+          resolved = true;
+          this.myPeerId = localFallbackId;
+          this.roomCode = localFallbackId;
+          this.status = 'connected';
+          this.updateStatus();
+          resolve(localFallbackId);
+        }
+      }
     });
   }
 
@@ -110,55 +192,87 @@ class ConnectionManager {
     this.status = 'connecting';
     this.updateStatus();
 
+    this.myPeerId = this.myPeerId || 'local-client-' + Math.floor(Math.random() * 100000);
+
     return new Promise((resolve, reject) => {
-      const PeerConstructor = (window as any).Peer || Peer;
-      this.peer = new PeerConstructor({
-        host: '0.peerjs.com',
-        secure: true,
-        port: 443,
-        config: {
-          iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-          ]
+      // Set local resolve hook for BroadcastChannel fallback
+      this._localResolve = () => {
+        clearTimeout(timeout);
+        clearInterval(pingInterval);
+        this.sendAction({ type: 'SET_ROLE', role: this.role, peerId: this.myPeerId });
+        resolve();
+      };
+
+      // Broadcast local connection request
+      this.broadcastChannel?.postMessage({
+        type: 'LOCAL_CONNECT',
+        roomCode,
+        role,
+        senderPeerId: this.myPeerId
+      });
+
+      // Periodically ping in case host is still initializing
+      const pingInterval = setInterval(() => {
+        if (this.status === 'connected') {
+          clearInterval(pingInterval);
+          return;
         }
-      });
-
-      this.peer!.on('open', (id) => {
-        this.myPeerId = id;
-        console.log(`[Client] Connected to PeerJS. My ID: ${id}. Connecting to room: ${roomCode}`);
-        
-        const conn = this.peer!.connect(roomCode, {
-          metadata: { role, peerId: id }
+        this.broadcastChannel?.postMessage({
+          type: 'LOCAL_CONNECT',
+          roomCode,
+          role,
+          senderPeerId: this.myPeerId
         });
-        
-        this.setupConnection(conn);
-        
-        // Timeout if connection takes too long
-        const timeout = setTimeout(() => {
-          if (this.status !== 'connected') {
-            this.status = 'disconnected';
-            this.updateStatus();
-            reject(new Error('Connection timeout'));
+      }, 500);
+
+      const PeerConstructor = (window as any).Peer || Peer;
+      try {
+        this.peer = new PeerConstructor({
+          host: '0.peerjs.com',
+          secure: true,
+          port: 443,
+          config: {
+            iceServers: [
+              { urls: 'stun:stun.l.google.com:19302' },
+              { urls: 'stun:stun1.l.google.com:19302' },
+            ]
           }
-        }, 10000);
-
-        conn.on('open', () => {
-          clearTimeout(timeout);
-          this.status = 'connected';
-          this.updateStatus();
-          // Notify Host of our role selection
-          this.sendAction({ type: 'SET_ROLE', role: this.role, peerId: this.myPeerId });
-          resolve();
         });
-      });
 
-      this.peer!.on('error', (err) => {
-        console.error('[Client] PeerJS Error:', err);
-        this.status = 'disconnected';
-        this.updateStatus();
-        reject(err);
-      });
+        this.peer!.on('open', (id) => {
+          this.myPeerId = id;
+          console.log(`[Client] Connected to PeerJS. My ID: ${id}. Connecting to room: ${roomCode}`);
+          
+          const conn = this.peer!.connect(roomCode, {
+            metadata: { role, peerId: id }
+          });
+          
+          this.setupConnection(conn);
+          
+          conn.on('open', () => {
+            clearInterval(pingInterval);
+            clearTimeout(timeout);
+            if (this.status !== 'connected') {
+              this.status = 'connected';
+              this.updateStatus();
+              this.sendAction({ type: 'SET_ROLE', role: this.role, peerId: this.myPeerId });
+              resolve();
+            }
+          });
+        });
+      } catch (e) {
+        console.error('[Client] PeerJS instantiation failed:', e);
+      }
+
+      // Timeout if connection takes too long
+      const timeout = setTimeout(() => {
+        clearInterval(pingInterval);
+        if (this.status !== 'connected') {
+          this.status = 'disconnected';
+          this.updateStatus();
+          reject(new Error('Connection timeout'));
+        }
+      }, 10000);
     });
   }
 
@@ -179,11 +293,9 @@ class ConnectionManager {
     this.status = 'reconnecting';
     this.updateStatus();
 
-    // Close connections without destroying peer
     this.connections.forEach(conn => conn.close());
     this.connections.clear();
 
-    // Simulate reconnection after 4 seconds
     setTimeout(() => {
       if (this.status === 'reconnecting') {
         console.log('[Network] Reconnecting sync started...');
@@ -195,12 +307,10 @@ class ConnectionManager {
   private reestablishConnection() {
     if (this.playMode === 'remote' && this.peer && this.roomCode) {
       if (this.role === 'operator') {
-        // Host just waits for clients to reconnect
         this.status = 'connected';
         this.updateStatus();
         console.log('[Host] Reconnected and listening for clients...');
       } else {
-        // Clients re-connect to Host
         console.log(`[Client] Re-connecting to Host: ${this.roomCode}`);
         const conn = this.peer.connect(this.roomCode, {
           metadata: { role: this.role, peerId: this.myPeerId }
@@ -221,56 +331,47 @@ class ConnectionManager {
 
   // --- DATA SENDING & BROADCASTING ---
   public sendAction(action: GameAction) {
-    const payload = { type: 'ACTION', data: action, timestamp: Date.now() };
+    const payload = { type: 'ACTION', data: action, timestamp: Date.now(), roomCode: this.roomCode, senderPeerId: this.myPeerId };
 
     this.delay(() => {
-      // 1. Local Broadcast Sync
+      this.broadcastChannel?.postMessage(payload);
+
       if (this.playMode === 'split-screen') {
-        this.broadcastChannel?.postMessage(payload);
-        // Also trigger locally if we are the Host role or acting on it
-        if (this.role === 'operator' && this.onActionReceivedCb) {
-          this.onActionReceivedCb(action);
-        } else if (this.onActionReceivedCb) {
+        if (this.onActionReceivedCb) {
           this.onActionReceivedCb(action);
         }
         return;
       }
 
-      // 2. Remote PeerJS Sync
       if (this.role === 'operator') {
-        // Host processes action directly
         if (this.onActionReceivedCb) {
           this.onActionReceivedCb(action);
         }
       } else {
-        // Client sends action to Host
         const hostConn = this.connections.get(this.roomCode || '');
-        if (hostConn && hostConn.open) {
+        if (hostConn && hostConn.open && !(hostConn as any).isMock) {
           hostConn.send(payload);
-        } else {
-          console.warn('[Client] Host connection is closed, holding action.');
         }
       }
     });
   }
 
   public broadcastState(state: GameState) {
-    const payload = { type: 'STATE', data: state, timestamp: Date.now() };
+    const payload = { type: 'STATE', data: state, timestamp: Date.now(), roomCode: this.roomCode, senderPeerId: this.myPeerId };
 
     this.delay(() => {
-      // 1. Local Broadcast Sync
+      this.broadcastChannel?.postMessage(payload);
+
       if (this.playMode === 'split-screen') {
-        this.broadcastChannel?.postMessage(payload);
         if (this.onStateUpdateCb) {
           this.onStateUpdateCb(state);
         }
         return;
       }
 
-      // 2. Remote PeerJS Sync (Only Host broadcasts state)
       if (this.role === 'operator') {
         this.connections.forEach((conn) => {
-          if (conn.open) {
+          if (conn.open && !(conn as any).isMock) {
             conn.send(payload);
           }
         });
@@ -295,7 +396,6 @@ class ConnectionManager {
     conn.on('close', () => {
       console.log(`[Network] Peer connection closed: ${conn.peer}`);
       this.connections.delete(conn.peer);
-      // Trigger reconnect state if we lose host
       if (this.role !== 'operator' && conn.peer === this.roomCode) {
         this.status = 'reconnecting';
         this.updateStatus();
