@@ -1359,9 +1359,14 @@ export const App: React.FC = () => {
   const handleJoinLobby = async () => {
     playClick();
     if (!lobbyInputCode) return;
-    setLocalRole(selectedLobbyRole);
-    await connectionManager.initializeClient(lobbyInputCode, selectedLobbyRole);
-    setRoomCode(lobbyInputCode);
+    try {
+      await connectionManager.initializeClient(lobbyInputCode, selectedLobbyRole);
+      setLocalRole(selectedLobbyRole);
+      setRoomCode(lobbyInputCode);
+    } catch (err) {
+      console.error('[Lobby] Join failed:', err);
+      alert('Impossibile connettersi alla stanza. Verifica il Room Code o riprova più tardi.');
+    }
   };
 
   const handleStartGame = () => {
@@ -1507,25 +1512,36 @@ export const App: React.FC = () => {
                   >
                     {roomCode || 'GENERIC LOBBY CODE...'}
                   </div>
-                  <p style={{ fontSize: '12px', color: '#aaa' }}>
-                    Fornisci questo codice al partner. Una volta connesso, potrai dare il via al gioco!
-                  </p>
-
-                  <div style={{ margin: '20px 0', border: '1px solid #222', padding: '10px', borderRadius: '4px', textAlign: 'left', fontSize: '12px' }}>
-                    <div>P1 Operator (Host): <span style={{ color: '#00ff00' }}>CONNECTED</span></div>
-                    <div>P2 Pilot: <span style={{ color: gameState.roles.pilot ? '#00ff00' : '#ff3300' }}>{gameState.roles.pilot ? 'CONNESSO' : 'IN ATTESA...'}</span></div>
-                    <div>P3 Patron: <span style={{ color: gameState.roles.patron ? '#00ff00' : '#ff3300' }}>{gameState.roles.patron ? 'CONNESSO' : 'NON DISPONIBILE'}</span></div>
-                  </div>
-
-                  {isLobbyCreator && (
-                    <button
-                      id="btn-start-game"
-                      className="btn-primary glow-magenta"
-                      onClick={handleStartGame}
-                      style={{ width: '100%' }}
-                    >
-                      AVVIA PARTITA!
-                    </button>
+                  {isLobbyCreator ? (
+                    <>
+                      <p style={{ fontSize: '12px', color: '#aaa' }}>
+                        Fornisci questo codice al partner. Una volta connesso, potrai dare il via al gioco!
+                      </p>
+                      <div style={{ margin: '20px 0', border: '1px solid #222', padding: '10px', borderRadius: '4px', textAlign: 'left', fontSize: '12px' }}>
+                        <div>P1 Operator (Host): <span style={{ color: '#00ff00' }}>CONNECTED</span></div>
+                        <div>P2 Pilot: <span style={{ color: gameState.roles.pilot ? '#00ff00' : '#ff3300' }}>{gameState.roles.pilot ? 'CONNESSO' : 'IN ATTESA...'}</span></div>
+                        <div>P3 Patron: <span style={{ color: gameState.roles.patron ? '#00ff00' : '#ff3300' }}>{gameState.roles.patron ? 'CONNESSO' : 'NON DISPONIBILE'}</span></div>
+                      </div>
+                      <button
+                        id="btn-start-game"
+                        className="btn-primary glow-magenta"
+                        onClick={handleStartGame}
+                        style={{ width: '100%' }}
+                      >
+                        AVVIA PARTITA!
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p style={{ fontSize: '14px', color: '#00ffcc', fontWeight: 'bold', margin: '20px 0' }}>
+                        CONNESSO! In attesa che l'Host avvii la partita...
+                      </p>
+                      <div style={{ margin: '20px 0', border: '1px solid #222', padding: '10px', borderRadius: '4px', textAlign: 'left', fontSize: '12px' }}>
+                        <div>P1 Operator (Host): <span style={{ color: '#00ff00' }}>CONNECTED</span></div>
+                        <div>P2 Pilot: <span style={{ color: gameState.roles.pilot ? '#00ff00' : '#ff3300' }}>{gameState.roles.pilot ? 'CONNESSO' : 'IN ATTESA...'}</span></div>
+                        <div>P3 Patron: <span style={{ color: gameState.roles.patron ? '#00ff00' : '#ff3300' }}>{gameState.roles.patron ? 'CONNESSO' : 'NON DISPONIBILE'}</span></div>
+                      </div>
+                    </>
                   )}
                 </div>
               )}

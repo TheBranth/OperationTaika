@@ -2,6 +2,22 @@ import { Peer } from 'peerjs';
 import type { DataConnection } from 'peerjs';
 import type { GameState, GameAction, PlayerRole, PlayMode, ConnectionStatus } from './types';
 
+const ICE_SERVERS = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:openrelay.metered.ca:80' },
+  {
+    urls: 'turn:openrelay.metered.ca:80',
+    username: 'openrelayproject',
+    credential: 'openrelayproject'
+  },
+  {
+    urls: 'turn:openrelay.metered.ca:443',
+    username: 'openrelayproject',
+    credential: 'openrelayproject'
+  }
+];
+
 class ConnectionManager {
   private peer: Peer | null = null;
   private connections: Map<string, DataConnection> = new Map();
@@ -124,14 +140,8 @@ class ConnectionManager {
       const PeerConstructor = (window as any).Peer || Peer;
       try {
         this.peer = new PeerConstructor({
-          host: '0.peerjs.com',
-          secure: true,
-          port: 443,
           config: {
-            iceServers: [
-              { urls: 'stun:stun.l.google.com:19302' },
-              { urls: 'stun:stun1.l.google.com:19302' },
-            ]
+            iceServers: ICE_SERVERS
           }
         });
 
@@ -228,14 +238,8 @@ class ConnectionManager {
       const PeerConstructor = (window as any).Peer || Peer;
       try {
         this.peer = new PeerConstructor({
-          host: '0.peerjs.com',
-          secure: true,
-          port: 443,
           config: {
-            iceServers: [
-              { urls: 'stun:stun.l.google.com:19302' },
-              { urls: 'stun:stun1.l.google.com:19302' },
-            ]
+            iceServers: ICE_SERVERS
           }
         });
 
