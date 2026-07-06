@@ -301,7 +301,7 @@ export const App: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>(defaultState);
   const [localRole, setLocalRole] = useState<PlayerRole | null>(null);
   const [lobbyInputCode, setLobbyInputCode] = useState('');
-  const [selectedLobbyRole, setSelectedLobbyRole] = useState<PlayerRole>('operator');
+  const [selectedLobbyRole, setSelectedLobbyRole] = useState<PlayerRole>('pilot');
   const [roomCode, setRoomCode] = useState<string | null>(null);
 
 
