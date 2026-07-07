@@ -128,6 +128,61 @@ export interface Level15State {
   integrity: number;
 }
 
+export interface Level16Recipe {
+  name: string;
+  pink: number;
+  blue: number;
+  garnish: 'ciliegia' | 'lime' | 'menta';
+  shakeTime: number;
+}
+
+export interface Level16State {
+  activeRecipe: Level16Recipe;
+  currentPink: number;
+  currentBlue: number;
+  currentGarnish: 'ciliegia' | 'lime' | 'menta' | null;
+  shakeStartTime: number | null;
+  shakeDuration: number;
+  score: number; // Target $150
+  timeLeft: number; // Target 180s
+  feedbackMessage: string;
+}
+
+export interface Level17Order {
+  id: number;
+  itemName: 'Hamburger' | 'Insalata' | 'Patatine';
+  details: string[];
+  timer: number;
+}
+
+export interface Level17State {
+  orders: Level17Order[];
+  buns: number;
+  meat: number;
+  potatoes: number;
+  lettuce: number;
+  currentPlate: string[];
+  grillActive: boolean;
+  grillProgress: number;
+  score: number; // Target 5 orders
+  timeLeft: number;
+}
+
+export interface Level18Request {
+  id: number;
+  productName: string;
+  slot: string;
+  timer: number;
+}
+
+export interface Level18State {
+  inventoryStock: { [key: string]: number };
+  activeRequests: Level18Request[];
+  returnsQueue: { productName: string; correctSlot: string }[];
+  score: number; // Target 6 fulfilled
+  timeLeft: number;
+}
+
 export interface GameState {
   status: 'lobby' | 'playing' | 'victory' | 'gameover';
   currentLevel: number;

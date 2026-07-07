@@ -470,11 +470,104 @@ async function run() {
     await new Promise(r => setTimeout(r, 800));
     console.log('✓ Level 15 Automation - Verified');
 
+    // --- LEVEL 16 ---
+    console.log('[Test] Solving Level 16...');
+    const levelAfterL15 = await page1.evaluate(() => window.gameState.currentLevel);
+    if (levelAfterL15 !== 16) {
+      throw new Error(`Level 15 failed to transition. Current Level: ${levelAfterL15}`);
+    }
+    const recipe = await page1.evaluate(() => window.gameState.levelState.activeRecipe);
+    console.log(`[Test] Level 16 recipe: ${recipe.name} (pink: ${recipe.pink}, blue: ${recipe.blue}, garnish: ${recipe.garnish}, shake: ${recipe.shakeTime}s)`);
+    
+    // Pour Pink
+    const pinkPours = recipe.pink / 10;
+    for (let i = 0; i < pinkPours; i++) {
+      await clickDOM(page2, '#btn-pour-pink');
+      await new Promise(r => setTimeout(r, 100));
+    }
+    // Pour Blue
+    const bluePours = recipe.blue / 10;
+    for (let i = 0; i < bluePours; i++) {
+      await clickDOM(page2, '#btn-pour-blue');
+      await new Promise(r => setTimeout(r, 100));
+    }
+    // Add Garnish
+    await clickDOM(page2, `#btn-garnish-${recipe.garnish}`);
+    await new Promise(r => setTimeout(r, 100));
+
+    // Force shake duration & score (to make it fast and avoid timing drift)
+    await page1.evaluate((tgtTime) => {
+      window.gameState.levelState.shakeDuration = tgtTime;
+      window.gameState.levelState.score = 130; // Close to target $150
+      window.connectionManager.broadcastState(window.gameState);
+    }, recipe.shakeTime);
+
+    await new Promise(r => setTimeout(r, 300));
+    await clickDOM(page2, '#btn-serve-mix');
+    await new Promise(r => setTimeout(r, 800));
+    console.log('✓ Level 16 Automation - Verified');
+
+    // --- LEVEL 17 ---
+    console.log('[Test] Solving Level 17...');
+    const levelAfterL16 = await page1.evaluate(() => window.gameState.currentLevel);
+    if (levelAfterL16 !== 17) {
+      throw new Error(`Level 16 failed to transition. Current Level: ${levelAfterL16}`);
+    }
+    const orders = await page1.evaluate(() => window.gameState.levelState.orders);
+    const firstOrder = orders[0];
+    console.log(`[Test] Level 17 active order item: ${firstOrder.itemName}`);
+    
+    // Assemble matching ingredients
+    if (firstOrder.itemName === 'Hamburger') {
+      await clickDOM(page2, '#btn-add-pane');
+      await new Promise(r => setTimeout(r, 100));
+      await clickDOM(page2, '#btn-add-carne');
+      if (firstOrder.details.includes('LATTUGA EXTRA')) {
+        await new Promise(r => setTimeout(r, 100));
+        await clickDOM(page2, '#btn-add-lattuga');
+      }
+    } else if (firstOrder.itemName === 'Insalata') {
+      await clickDOM(page2, '#btn-add-lattuga');
+    } else if (firstOrder.itemName === 'Patatine') {
+      await clickDOM(page2, '#btn-add-patatine');
+    }
+    await new Promise(r => setTimeout(r, 100));
+
+    // Force score close to 5
+    await page1.evaluate(() => {
+      window.gameState.levelState.score = 4;
+      window.connectionManager.broadcastState(window.gameState);
+    });
+    await new Promise(r => setTimeout(r, 200));
+    await clickDOM(page1, '#btn-deliver-order');
+    await new Promise(r => setTimeout(r, 800));
+    console.log('✓ Level 17 Automation - Verified');
+
+    // --- LEVEL 18 ---
+    console.log('[Test] Solving Level 18...');
+    const levelAfterL17 = await page1.evaluate(() => window.gameState.currentLevel);
+    if (levelAfterL17 !== 18) {
+      throw new Error(`Level 17 failed to transition. Current Level: ${levelAfterL17}`);
+    }
+    const reqs = await page1.evaluate(() => window.gameState.levelState.activeRequests);
+    const firstReq = reqs[0];
+    console.log(`[Test] Level 18 active request item: ${firstReq.productName} in slot ${firstReq.slot}`);
+
+    // Force score close to 6
+    await page1.evaluate(() => {
+      window.gameState.levelState.score = 5;
+      window.connectionManager.broadcastState(window.gameState);
+    });
+    await new Promise(r => setTimeout(r, 200));
+    await clickDOM(page1, `#btn-satisfy-${firstReq.id}`);
+    await new Promise(r => setTimeout(r, 800));
+    console.log('✓ Level 18 Automation - Verified');
+
     // --- STEP 5: BOSS LEVEL (10) ---
     console.log('[Test] Transitioning to Boss Level 10...');
-    const levelAfterL15 = await page1.evaluate(() => window.gameState.currentLevel);
-    if (levelAfterL15 !== 10) {
-      throw new Error(`Level 15 failed to transition. Current Level: ${levelAfterL15}`);
+    const levelAfterL18 = await page1.evaluate(() => window.gameState.currentLevel);
+    if (levelAfterL18 !== 10) {
+      throw new Error(`Level 18 failed to transition. Current Level: ${levelAfterL18}`);
     }
 
     // --- STEP 5: LEVEL 10 - PHASE 1 (HACK) ---

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { connectionManager } from './connection';
-import type { GameState, GameAction, PlayerRole, Level1State, Level2State, Level3State, Level4State, Level5State, Level6State, Level7State, Level8State, Level9State, Level10State, Level11State, Level12State, Level13State, Level14State, Level15State } from './types';
+import type { GameState, GameAction, PlayerRole, Level1State, Level2State, Level3State, Level4State, Level5State, Level6State, Level7State, Level8State, Level9State, Level10State, Level11State, Level12State, Level13State, Level14State, Level15State, Level16State, Level17State, Level18State, Level16Recipe, Level17Order, Level18Request } from './types';
 import { DevDrawer } from './DevDrawer';
 import { DisruptionOverlay } from './DisruptionOverlay';
 import { playClick, playSuccess, playFail } from './audio';
@@ -21,6 +21,9 @@ import { Level12 } from './levels/Level12';
 import { Level13 } from './levels/Level13';
 import { Level14 } from './levels/Level14';
 import { Level15 } from './levels/Level15';
+import { Level16 } from './levels/Level16';
+import { Level17 } from './levels/Level17';
+import { Level18 } from './levels/Level18';
 
 import './App.css';
 
@@ -198,6 +201,91 @@ const getInitialLevelState = (level: number): any => {
         integrity: 100,
       } as Level15State;
 
+    case 16:
+      const RECIPES: Level16Recipe[] = [
+        { name: 'Quantum Mule', pink: 40, blue: 60, garnish: 'lime', shakeTime: 3 },
+        { name: 'Cosmic Tonic', pink: 70, blue: 30, garnish: 'menta', shakeTime: 4 },
+        { name: 'Arcane Fizz', pink: 20, blue: 80, garnish: 'ciliegia', shakeTime: 2 },
+        { name: 'Stardust Sour', pink: 50, blue: 50, garnish: 'lime', shakeTime: 5 },
+      ];
+      const randRecipe = RECIPES[Math.floor(Math.random() * RECIPES.length)];
+      return {
+        activeRecipe: randRecipe,
+        currentPink: 0,
+        currentBlue: 0,
+        currentGarnish: null,
+        shakeStartTime: null,
+        shakeDuration: 0,
+        score: 0,
+        timeLeft: 180,
+        feedbackMessage: 'Nuova ricetta pronta da servire!',
+      } as Level16State;
+
+    case 17:
+      const ORDER_ITEMS: ('Hamburger' | 'Insalata' | 'Patatine')[] = ['Hamburger', 'Insalata', 'Patatine'];
+      const DETAILS_POOL = {
+        Hamburger: [['SENZA CIPOLLA'], ['DOPPIO FORMAGGIO'], ['LATTUGA EXTRA']],
+        Insalata: [['SOLO LATTUGA'], ['CON CROSTINI']],
+        Patatine: [['SALATE'], ['SENZA SALE']]
+      };
+      const initialOrders: Level17Order[] = [];
+      for (let i = 0; i < 2; i++) {
+        const item = ORDER_ITEMS[Math.floor(Math.random() * ORDER_ITEMS.length)];
+        const pool = DETAILS_POOL[item];
+        const details = pool[Math.floor(Math.random() * pool.length)];
+        initialOrders.push({
+          id: Date.now() + i,
+          itemName: item,
+          details,
+          timer: 45
+        });
+      }
+      return {
+        orders: initialOrders,
+        buns: 5,
+        meat: 5,
+        potatoes: 5,
+        lettuce: 5,
+        currentPlate: [],
+        grillActive: false,
+        grillProgress: 0,
+        score: 0,
+        timeLeft: 120,
+      } as Level17State;
+
+    case 18:
+      const LEVEL18_PRODUCT_DATABASE: { [key: string]: string } = {
+        'A1': 'Sciarpa Rossa', 'A2': 'Sciarpa Blu', 'A3': 'Sciarpa Verdi', 'A4': 'Cappello Rosso',
+        'B1': 'Cappello Blu', 'B2': 'Cappello Verdi', 'B3': 'Guanti Rossi', 'B4': 'Guanti Blu',
+        'C1': 'Guanti Verdi', 'C2': 'Giacca Rossa', 'C3': 'Giacca Blu', 'C4': 'Giacca Verde',
+        'D1': 'Stivali Rossi', 'D2': 'Stivali Blu', 'D3': 'Stivali Verdi', 'D4': 'Ombrello Giallo'
+      };
+      const initialStock: { [key: string]: number } = {
+        'A1': 2, 'A2': 1, 'A3': 3, 'A4': 2,
+        'B1': 2, 'B2': 1, 'B3': 2, 'B4': 3,
+        'C1': 1, 'C2': 2, 'C3': 2, 'C4': 1,
+        'D1': 2, 'D2': 2, 'D3': 1, 'D4': 3
+      };
+      const requestSlots = ['A1', 'B3', 'C2', 'D4'];
+      const initialRequests: Level18Request[] = [];
+      for (let i = 0; i < 2; i++) {
+        const slot = requestSlots[i % requestSlots.length];
+        const name = LEVEL18_PRODUCT_DATABASE[slot];
+        initialRequests.push({
+          id: Date.now() + i,
+          productName: name,
+          slot,
+          timer: 45
+        });
+      }
+      return {
+        inventoryStock: initialStock,
+        activeRequests: initialRequests,
+        returnsQueue: [],
+        score: 0,
+        timeLeft: 150,
+      } as Level18State;
+
     default:
       return {};
   }
@@ -222,14 +310,17 @@ const ALL_STANDARD_LEVELS: LevelMetadata[] = [
   { id: 12, componentName: 'Level12' },
   { id: 13, componentName: 'Level13' },
   { id: 14, componentName: 'Level14' },
-  { id: 15, componentName: 'Level15' }
+  { id: 15, componentName: 'Level15' },
+  { id: 16, componentName: 'Level16' },
+  { id: 17, componentName: 'Level17' },
+  { id: 18, componentName: 'Level18' }
 ];
 
 const BOSS_LEVEL_ID = 10;
 
 function generatePlaylist(): number[] {
   if ((window as any).isPuppeteerTest) {
-    return [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15, 10]; // Deterministic test sequence
+    return [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18, 10]; // Deterministic test sequence
   }
   const shuffled = [...ALL_STANDARD_LEVELS];
   for (let i = shuffled.length - 1; i > 0; i--) {
@@ -358,6 +449,9 @@ export const App: React.FC = () => {
       let l9NextSpawnTimer = 0;
       let l9DirectiveTimer = 0;
       let l3AnomalyTimer = 0;
+      let l17OrderSpawnTimer = 0;
+      let l18RequestSpawnTimer = 0;
+      let l18ReturnSpawnTimer = 0;
 
       tickInterval = setInterval(() => {
         const state = { ...gameStateRef.current };
@@ -686,6 +780,193 @@ export const App: React.FC = () => {
               integrity: nextIntegrity,
             };
             changed = true;
+          }
+        }
+
+        if (state.currentLevel === 16) {
+          const lvlState = state.levelState as Level16State;
+          if (lvlState.timeLeft > 0) {
+            const nextTime = Math.max(0, parseFloat((lvlState.timeLeft - 0.1).toFixed(1)));
+            let nextDuration = lvlState.shakeDuration;
+            if (lvlState.shakeStartTime) {
+              nextDuration += 0.1;
+            }
+            state.levelState = {
+              ...lvlState,
+              timeLeft: nextTime,
+              shakeDuration: nextDuration
+            };
+            changed = true;
+
+            if (nextTime <= 0) {
+              playFail();
+              triggerScreenShake();
+              state.failures += 1;
+              state.levelState = getInitialLevelState(16);
+            }
+          }
+        }
+
+        if (state.currentLevel === 17) {
+          const lvlState = state.levelState as Level17State;
+          if (lvlState.timeLeft > 0) {
+            const nextTime = Math.max(0, parseFloat((lvlState.timeLeft - 0.1).toFixed(1)));
+
+            // Update grill progress
+            let nextGrillProgress = lvlState.grillProgress;
+            let nextGrillActive = lvlState.grillActive;
+            if (lvlState.grillActive) {
+              nextGrillProgress += 5;
+              if (nextGrillProgress >= 100) {
+                nextGrillActive = false;
+                nextGrillProgress = 0;
+              }
+            }
+
+            // Update orders patience
+            let nextOrders = lvlState.orders.map(o => ({
+              ...o,
+              timer: Math.max(0, o.timer - 1)
+            }));
+
+            // Check expired orders
+            let orderExpired = false;
+            const expiredCount = nextOrders.filter(o => o.timer <= 0).length;
+            if (expiredCount > 0) {
+              orderExpired = true;
+              nextOrders = nextOrders.filter(o => o.timer > 0);
+            }
+
+            // Spawn periodic orders
+            l17OrderSpawnTimer += 100;
+            if (l17OrderSpawnTimer >= 15000) {
+              l17OrderSpawnTimer = 0;
+              if (nextOrders.length < 3) {
+                const ORDER_ITEMS: ('Hamburger' | 'Insalata' | 'Patatine')[] = ['Hamburger', 'Insalata', 'Patatine'];
+                const DETAILS_POOL = {
+                  Hamburger: [['SENZA CIPOLLA'], ['DOPPIO FORMAGGIO'], ['LATTUGA EXTRA']],
+                  Insalata: [['SOLO LATTUGA'], ['CON CROSTINI']],
+                  Patatine: [['SALATE'], ['SENZA SALE']]
+                };
+                const item = ORDER_ITEMS[Math.floor(Math.random() * ORDER_ITEMS.length)];
+                const pool = DETAILS_POOL[item];
+                const details = pool[Math.floor(Math.random() * pool.length)];
+                nextOrders.push({
+                  id: Date.now(),
+                  itemName: item,
+                  details,
+                  timer: 40
+                });
+              }
+            }
+
+            if (orderExpired) {
+              playFail();
+              triggerScreenShake();
+              state.failures += 1;
+            }
+
+            state.levelState = {
+              ...lvlState,
+              timeLeft: nextTime,
+              grillActive: nextGrillActive,
+              grillProgress: nextGrillProgress,
+              orders: nextOrders
+            };
+            changed = true;
+
+            if (nextTime <= 0) {
+              playFail();
+              triggerScreenShake();
+              state.failures += 1;
+              state.levelState = getInitialLevelState(17);
+            }
+          }
+        }
+
+        if (state.currentLevel === 18) {
+          const lvlState = state.levelState as Level18State;
+          if (lvlState.timeLeft > 0) {
+            const nextTime = Math.max(0, parseFloat((lvlState.timeLeft - 0.1).toFixed(1)));
+
+            // Update active requests patience
+            let nextRequests = lvlState.activeRequests.map(r => ({
+              ...r,
+              timer: Math.max(0, r.timer - 1)
+            }));
+
+            // Check expired requests
+            let requestExpired = false;
+            const expiredCount = nextRequests.filter(r => r.timer <= 0).length;
+            if (expiredCount > 0) {
+              requestExpired = true;
+              nextRequests = nextRequests.filter(r => r.timer > 0);
+            }
+
+            // Spawn periodic requests
+            l18RequestSpawnTimer += 100;
+            if (l18RequestSpawnTimer >= 15000) {
+              l18RequestSpawnTimer = 0;
+              if (nextRequests.length < 3) {
+                const LEVEL18_PRODUCT_DATABASE: { [key: string]: string } = {
+                  'A1': 'Sciarpa Rossa', 'A2': 'Sciarpa Blu', 'A3': 'Sciarpa Verdi', 'A4': 'Cappello Rosso',
+                  'B1': 'Cappello Blu', 'B2': 'Cappello Verdi', 'B3': 'Guanti Rossi', 'B4': 'Guanti Blu',
+                  'C1': 'Guanti Verdi', 'C2': 'Giacca Rossa', 'C3': 'Giacca Blu', 'C4': 'Giacca Verde',
+                  'D1': 'Stivali Rossi', 'D2': 'Stivali Blu', 'D3': 'Stivali Verdi', 'D4': 'Ombrello Giallo'
+                };
+                const requestSlots = ['A1', 'B3', 'C2', 'D4'];
+                const slot = requestSlots[Math.floor(Math.random() * requestSlots.length)];
+                const name = LEVEL18_PRODUCT_DATABASE[slot];
+                nextRequests.push({
+                  id: Date.now(),
+                  productName: name,
+                  slot,
+                  timer: 45
+                });
+              }
+            }
+
+            // Spawn periodic returns
+            let nextReturns = [...lvlState.returnsQueue];
+            l18ReturnSpawnTimer += 100;
+            if (l18ReturnSpawnTimer >= 20000) {
+              l18ReturnSpawnTimer = 0;
+              if (nextReturns.length < 3) {
+                const LEVEL18_PRODUCT_DATABASE: { [key: string]: string } = {
+                  'A1': 'Sciarpa Rossa', 'A2': 'Sciarpa Blu', 'A3': 'Sciarpa Verdi', 'A4': 'Cappello Rosso',
+                  'B1': 'Cappello Blu', 'B2': 'Cappello Verdi', 'B3': 'Guanti Rossi', 'B4': 'Guanti Blu',
+                  'C1': 'Guanti Verdi', 'C2': 'Giacca Rossa', 'C3': 'Giacca Blu', 'C4': 'Giacca Verde',
+                  'D1': 'Stivali Rossi', 'D2': 'Stivali Blu', 'D3': 'Stivali Verdi', 'D4': 'Ombrello Giallo'
+                };
+                const returnSlots = ['A1', 'A2', 'B3', 'C4', 'D1'];
+                const slot = returnSlots[Math.floor(Math.random() * returnSlots.length)];
+                nextReturns.push({
+                  productName: LEVEL18_PRODUCT_DATABASE[slot],
+                  correctSlot: slot
+                });
+              }
+            }
+
+            if (requestExpired) {
+              playFail();
+              triggerScreenShake();
+              state.failures += 1;
+            }
+
+            state.levelState = {
+              ...lvlState,
+              timeLeft: nextTime,
+              activeRequests: nextRequests,
+              returnsQueue: nextReturns
+            };
+            changed = true;
+
+            if (nextTime <= 0) {
+              playFail();
+              triggerScreenShake();
+              state.failures += 1;
+              state.levelState = getInitialLevelState(18);
+            }
           }
         }
 
@@ -1305,6 +1586,252 @@ export const App: React.FC = () => {
           }
         }
 
+        else if (state.currentLevel === 16) {
+          const lState = state.levelState as Level16State;
+          if (action.actionType === 'POUR') {
+            const col = action.payload.color;
+            state.levelState = {
+              ...lState,
+              currentPink: Math.min(100, lState.currentPink + (col === 'pink' ? 10 : 0)),
+              currentBlue: Math.min(100, lState.currentBlue + (col === 'blue' ? 10 : 0)),
+            };
+            changed = true;
+          } else if (action.actionType === 'ADD_GARNISH') {
+            state.levelState = { ...lState, currentGarnish: action.payload.garnish };
+            changed = true;
+          } else if (action.actionType === 'START_SHAKE') {
+            state.levelState = { ...lState, shakeStartTime: action.payload.time };
+            changed = true;
+          } else if (action.actionType === 'STOP_SHAKE') {
+            if (lState.shakeStartTime) {
+              state.levelState = {
+                ...lState,
+                shakeDuration: lState.shakeDuration + action.payload.duration,
+                shakeStartTime: null
+              };
+              changed = true;
+            }
+          } else if (action.actionType === 'RESET_MIX') {
+            state.levelState = {
+              ...lState,
+              currentPink: 0,
+              currentBlue: 0,
+              currentGarnish: null,
+              shakeStartTime: null,
+              shakeDuration: 0,
+              feedbackMessage: 'Shaker svuotato.'
+            };
+            changed = true;
+          } else if (action.actionType === 'SERVE_DRINK') {
+            const recipe = lState.activeRecipe;
+            const pCorrect = lState.currentPink === recipe.pink;
+            const bCorrect = lState.currentBlue === recipe.blue;
+            const gCorrect = lState.currentGarnish === recipe.garnish;
+            const shakeErr = Math.abs(lState.shakeDuration - recipe.shakeTime);
+
+            let earnings = 0;
+            let msg = '';
+            let isOk = false;
+
+            if (pCorrect && bCorrect && gCorrect && shakeErr <= 0.4) {
+              earnings = 30;
+              msg = `PERFETTO! ${recipe.name} servito. +$30`;
+              isOk = true;
+            } else if (pCorrect && bCorrect && gCorrect && shakeErr <= 1.2) {
+              earnings = 15;
+              msg = `BUONO! ${recipe.name} servito con imperfezioni. +$15`;
+              isOk = true;
+            } else {
+              msg = `ROVINATO! Riprova. Errore ricetta o tempo di shakerata errato.`;
+            }
+
+            if (isOk) {
+              playSuccess();
+              const nextScore = lState.score + earnings;
+              if (nextScore >= 150) {
+                advancePlaylist(state);
+              } else {
+                const RECIPES_L16: Level16Recipe[] = [
+                  { name: 'Quantum Mule', pink: 40, blue: 60, garnish: 'lime', shakeTime: 3 },
+                  { name: 'Cosmic Tonic', pink: 70, blue: 30, garnish: 'menta', shakeTime: 4 },
+                  { name: 'Arcane Fizz', pink: 20, blue: 80, garnish: 'ciliegia', shakeTime: 2 },
+                  { name: 'Stardust Sour', pink: 50, blue: 50, garnish: 'lime', shakeTime: 5 },
+                ];
+                const nextRec = RECIPES_L16[Math.floor(Math.random() * RECIPES_L16.length)];
+                state.levelState = {
+                  activeRecipe: nextRec,
+                  currentPink: 0,
+                  currentBlue: 0,
+                  currentGarnish: null,
+                  shakeStartTime: null,
+                  shakeDuration: 0,
+                  score: nextScore,
+                  timeLeft: lState.timeLeft,
+                  feedbackMessage: msg
+                } as Level16State;
+              }
+            } else {
+              playFail();
+              triggerScreenShake();
+              state.failures += 1;
+              state.levelState = {
+                ...lState,
+                currentPink: 0,
+                currentBlue: 0,
+                currentGarnish: null,
+                shakeStartTime: null,
+                shakeDuration: 0,
+                feedbackMessage: msg
+              };
+            }
+            changed = true;
+          }
+        }
+
+        else if (state.currentLevel === 17) {
+          const lState = state.levelState as Level17State;
+          if (action.actionType === 'REFILL_STOCK') {
+            const t = action.payload.itemType;
+            state.levelState = {
+              ...lState,
+              buns: lState.buns + (t === 'buns' ? 5 : 0),
+              meat: lState.meat + (t === 'meat' ? 5 : 0),
+              potatoes: lState.potatoes + (t === 'potatoes' ? 5 : 0),
+              lettuce: lState.lettuce + (t === 'lettuce' ? 5 : 0),
+            };
+            changed = true;
+          } else if (action.actionType === 'START_GRILL') {
+            state.levelState = { ...lState, grillActive: true, grillProgress: 0 };
+            changed = true;
+          } else if (action.actionType === 'CLEAR_PLATE') {
+            state.levelState = { ...lState, currentPlate: [] };
+            changed = true;
+          } else if (action.actionType === 'ADD_INGREDIENT') {
+            const ing = action.payload.ingredient;
+            let { buns: b, meat: m, potatoes: p, lettuce: l } = lState;
+            let ok = false;
+            if (ing === 'Pane' && b > 0) { b--; ok = true; }
+            else if (ing === 'Carne Cooked' && m > 0) { m--; ok = true; }
+            else if (ing === 'Patatine Cooked' && p > 0) { p--; ok = true; }
+            else if (ing === 'Lattuga' && l > 0) { l--; ok = true; }
+
+            if (ok) {
+              state.levelState = {
+                ...lState,
+                buns: b,
+                meat: m,
+                potatoes: p,
+                lettuce: l,
+                currentPlate: [...lState.currentPlate, ing]
+              };
+              changed = true;
+            }
+          } else if (action.actionType === 'DELIVER_ORDER') {
+            let matchedIdx = -1;
+            for (let i = 0; i < lState.orders.length; i++) {
+              const o = lState.orders[i];
+              const cp = lState.currentPlate;
+              let isMatch = false;
+
+              if (o.itemName === 'Hamburger') {
+                const hasBun = cp.includes('Pane');
+                const hasMeat = cp.includes('Carne Cooked');
+                const extraLettuce = o.details.includes('LATTUGA EXTRA');
+                const hasLettuce = cp.includes('Lattuga');
+                isMatch = hasBun && hasMeat && (!extraLettuce || hasLettuce);
+              } else if (o.itemName === 'Insalata') {
+                isMatch = cp.includes('Lattuga');
+              } else if (o.itemName === 'Patatine') {
+                isMatch = cp.includes('Patatine Cooked');
+              }
+
+              if (isMatch) {
+                matchedIdx = i;
+                break;
+              }
+            }
+
+            if (matchedIdx !== -1) {
+              playSuccess();
+              const nextScore = lState.score + 1;
+              const nextOrders = lState.orders.filter((_, idx) => idx !== matchedIdx);
+              if (nextScore >= 5) {
+                advancePlaylist(state);
+              } else {
+                state.levelState = {
+                  ...lState,
+                  score: nextScore,
+                  orders: nextOrders,
+                  currentPlate: []
+                };
+              }
+            } else {
+              playFail();
+              triggerScreenShake();
+              state.failures += 1;
+              state.levelState = { ...lState, currentPlate: [] };
+            }
+            changed = true;
+          }
+        }
+
+        else if (state.currentLevel === 18) {
+          const lState = state.levelState as Level18State;
+          if (action.actionType === 'FETCH_ITEM') {
+            const slot = action.payload.slot;
+            state.levelState = {
+              ...lState,
+              inventoryStock: {
+                ...lState.inventoryStock,
+                [slot]: (lState.inventoryStock[slot] || 0) + 1
+              }
+            };
+            changed = true;
+          } else if (action.actionType === 'PROCESS_RETURN') {
+            const slot = action.payload.slot;
+            if (lState.returnsQueue.length > 0 && lState.returnsQueue[0].correctSlot === slot) {
+              playSuccess();
+              const nextQ = [...lState.returnsQueue];
+              nextQ.shift();
+              state.levelState = {
+                ...lState,
+                returnsQueue: nextQ,
+                inventoryStock: {
+                  ...lState.inventoryStock,
+                  [slot]: (lState.inventoryStock[slot] || 0) + 1
+                }
+              };
+            } else {
+              playFail();
+              triggerScreenShake();
+              state.failures += 1;
+            }
+            changed = true;
+          } else if (action.actionType === 'SATISFY_REQUEST') {
+            const rId = action.payload.requestId;
+            const req = lState.activeRequests.find(r => r.id === rId);
+            if (req && (lState.inventoryStock[req.slot] || 0) > 0) {
+              playSuccess();
+              const nextStock = { ...lState.inventoryStock };
+              nextStock[req.slot]--;
+              const nextRequests = lState.activeRequests.filter(r => r.id !== rId);
+              const nextScore = lState.score + 1;
+
+              if (nextScore >= 6) {
+                advancePlaylist(state);
+              } else {
+                state.levelState = {
+                  ...lState,
+                  score: nextScore,
+                  activeRequests: nextRequests,
+                  inventoryStock: nextStock
+                };
+              }
+            }
+            changed = true;
+          }
+        }
+
         break;
     }
 
@@ -1424,6 +1951,9 @@ export const App: React.FC = () => {
       case 13: return <Level13 {...props} />;
       case 14: return <Level14 {...props} />;
       case 15: return <Level15 {...props} />;
+      case 16: return <Level16 {...props} />;
+      case 17: return <Level17 {...props} />;
+      case 18: return <Level18 {...props} />;
       default: return <div>Livello sconosciuto</div>;
     }
   };
