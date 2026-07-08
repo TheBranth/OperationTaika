@@ -225,7 +225,7 @@ const getInitialLevelState = (level: number): any => {
       const ORDER_ITEMS: ('Hamburger' | 'Insalata' | 'Patatine')[] = ['Hamburger', 'Insalata', 'Patatine'];
       const DETAILS_POOL = {
         Hamburger: [['SENZA CIPOLLA'], ['DOPPIO FORMAGGIO'], ['LATTUGA EXTRA']],
-        Insalata: [['SOLO LATTUGA'], ['CON CROSTINI']],
+        Insalata: [['SOLO LATTUGA'], ['LATTUGA DOPPIA']],
         Patatine: [['SALATE'], ['SENZA SALE']]
       };
       const initialOrders: Level17Order[] = [];
@@ -826,7 +826,7 @@ export const App: React.FC = () => {
             // Update orders patience
             let nextOrders = lvlState.orders.map(o => ({
               ...o,
-              timer: Math.max(0, o.timer - 1)
+              timer: Math.max(0, parseFloat((o.timer - 0.1).toFixed(1)))
             }));
 
             // Check expired orders
@@ -845,7 +845,7 @@ export const App: React.FC = () => {
                 const ORDER_ITEMS: ('Hamburger' | 'Insalata' | 'Patatine')[] = ['Hamburger', 'Insalata', 'Patatine'];
                 const DETAILS_POOL = {
                   Hamburger: [['SENZA CIPOLLA'], ['DOPPIO FORMAGGIO'], ['LATTUGA EXTRA']],
-                  Insalata: [['SOLO LATTUGA'], ['CON CROSTINI']],
+                  Insalata: [['SOLO LATTUGA'], ['LATTUGA DOPPIA']],
                   Patatine: [['SALATE'], ['SENZA SALE']]
                 };
                 const item = ORDER_ITEMS[Math.floor(Math.random() * ORDER_ITEMS.length)];
@@ -892,7 +892,7 @@ export const App: React.FC = () => {
             // Update active requests patience
             let nextRequests = lvlState.activeRequests.map(r => ({
               ...r,
-              timer: Math.max(0, r.timer - 1)
+              timer: Math.max(0, parseFloat((r.timer - 0.1).toFixed(1)))
             }));
 
             // Check expired requests
@@ -1740,7 +1740,9 @@ export const App: React.FC = () => {
                 const hasLettuce = cp.includes('Lattuga');
                 isMatch = hasBun && hasMeat && (!extraLettuce || hasLettuce);
               } else if (o.itemName === 'Insalata') {
-                isMatch = cp.includes('Lattuga');
+                const doubleLettuce = o.details.includes('LATTUGA DOPPIA');
+                const lettuceCount = cp.filter(ing => ing === 'Lattuga').length;
+                isMatch = lettuceCount >= (doubleLettuce ? 2 : 1);
               } else if (o.itemName === 'Patatine') {
                 isMatch = cp.includes('Patatine Cooked');
               }

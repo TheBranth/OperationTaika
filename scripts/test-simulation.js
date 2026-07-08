@@ -528,6 +528,10 @@ async function run() {
       }
     } else if (firstOrder.itemName === 'Insalata') {
       await clickDOM(page2, '#btn-add-lattuga');
+      if (firstOrder.details.includes('LATTUGA DOPPIA')) {
+        await new Promise(r => setTimeout(r, 100));
+        await clickDOM(page2, '#btn-add-lattuga');
+      }
     } else if (firstOrder.itemName === 'Patatine') {
       await clickDOM(page2, '#btn-add-patatine');
     }
