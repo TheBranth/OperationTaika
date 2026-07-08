@@ -119,38 +119,58 @@ export const Level14: React.FC<LevelProps> = ({ role, levelState, onAction }) =>
               const orderIdx = p2SelectedSequence.indexOf(idx);
               const isSelected = orderIdx !== -1;
               return (
-                <button
+                <div
                   key={idx}
-                  id={`l14-star-${idx}`}
-                  onClick={() => handleSelectStar(idx)}
                   style={{
                     position: 'absolute',
                     left: `${star.x}%`,
                     top: `${star.y}%`,
                     transform: 'translate(-50%, -50%)',
-                    width: '44px',
-                    height: '44px',
-                    borderRadius: '50%',
-                    background: isSelected ? 'var(--neon-cyan)' : 'transparent',
-                    border: isSelected ? '3px solid #fff' : '2px solid rgba(255,255,255,0.4)',
-                    color: isSelected ? '#000' : '#fff',
-                    cursor: 'pointer',
-                    fontSize: '11px',
-                    fontWeight: 'bold',
-                    boxShadow: isSelected ? '0 0 15px var(--neon-cyan)' : 'none',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >
-                  ⭐
-                  {isSelected && (
-                    <span style={{ fontSize: '9px', display: 'block', marginTop: '-2px' }}>
-                      #{orderIdx + 1}
-                    </span>
-                  )}
-                </button>
+                  <button
+                    id={`l14-star-${idx}`}
+                    onClick={() => handleSelectStar(idx)}
+                    style={{
+                      width: '44px',
+                      height: '44px',
+                      borderRadius: '50%',
+                      background: isSelected ? 'var(--neon-cyan)' : 'transparent',
+                      border: isSelected ? '3px solid #fff' : '2px solid rgba(255,255,255,0.4)',
+                      color: isSelected ? '#000' : '#fff',
+                      cursor: 'pointer',
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                      boxShadow: isSelected ? '0 0 15px var(--neon-cyan)' : 'none',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    ⭐
+                    {isSelected && (
+                      <span style={{ fontSize: '9px', display: 'block', marginTop: '-2px' }}>
+                        #{orderIdx + 1}
+                      </span>
+                    )}
+                  </button>
+                  <span
+                    style={{
+                      fontSize: '10px',
+                      color: isSelected ? 'var(--neon-cyan)' : 'rgba(255,255,255,0.7)',
+                      marginTop: '4px',
+                      fontWeight: 'bold',
+                      textShadow: '0 0 5px rgba(0,0,0,0.8)',
+                    }}
+                  >
+                    {STAR_LABELS[idx]}
+                  </span>
+                </div>
               );
             })}
           </div>
